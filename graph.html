@@ -1,0 +1,241 @@
+
+<script src="https://cdn.anychart.com/releases/8.9.0/js/anychart-base.min.js" type="text/javascript"></script>
+<div display="flex">
+	<div id="container0" style="width: 45%; height: 200px;display: inline-block;"></div>
+	<div id="container1" style="width: 45%; height: 200px;display: inline-block;"></div>
+	<div id="container2" style="width: 45%; height: 200px;display: inline-block;"></div>
+	<div id="container3" style="width: 45%; height: 200px;display: inline-block;"></div>
+	
+	<div id="container4" style="width: 90%; height: 200px;display: inline-block;"></div>
+	
+	<button type="button" onclick="startSpeed()" style="width: 20%; height: 50px;display: inline-block;">
+		start 
+	</button>
+	
+	<button type="button" onclick="stopSpeed()" style="width: 20%; height: 50px;display: inline-block;">
+		stop 
+	</button>
+	
+</div>
+
+<script>
+	
+		// create data
+		var data0 = anychart.data.set([]);
+		var data1 = anychart.data.set([]);
+		var data2 = anychart.data.set([]);
+		var data3 = anychart.data.set([]);
+		
+		// create a chart
+		chart0 = anychart.area();
+		chart1= anychart.area();
+		chart2= anychart.area();
+		chart3= anychart.area();
+		
+		chart0.xScroller(true);
+		chart0.yScale().ticks().interval(5);
+		
+		
+		chart1.xScroller(true);
+		chart1.yScale().ticks().interval(5);
+		
+		
+		chart2.xScroller(true);
+		chart2.yScale().ticks().interval(5);
+		
+		
+		chart3.xScroller(true);
+		chart3.yScale().ticks().interval(5);
+		
+		var series0 = chart0.splineArea(data0);
+		var series1 = chart1.splineArea(data1);
+		var series2 = chart2.splineArea(data2);
+		var series3 = chart3.splineArea(data3);
+		
+		chart0.container("container0").draw();
+		chart1.container("container1").draw();
+		chart2.container("container2").draw();
+		chart3.container("container3").draw();
+		
+		chart0.title().enabled(true).text("cpu 0");
+		chart1.title().enabled(true).text("cpu 1");
+		chart2.title().enabled(true).text("cpu 2");
+		chart3.title().enabled(true).text("cpu 3");
+		
+		var index =data0.mapAs().getRowsCount();
+		
+		function GetNewData(){
+			newIndex = index++;
+			
+			GetChartItem();
+			
+			if (newIndex > 180)
+			{
+				data0.remove(0);
+				data1.remove(0);
+				data2.remove(0);
+				data3.remove(0);
+			}
+			
+			setTimeout(GetNewData, 1000);
+		}
+		
+		GetNewData();
+		
+		function GetChartItem(){
+			$.ajax(
+			{
+				url: "cartpart.php", //the page containing php script
+				type: "POST", //request type
+				success:
+					function(result)
+					{
+						var res = JSON.parse(result);
+						
+						data0.append(
+						{
+							x: "" + newIndex,
+							value : res["cpu0"]["loadavg"]
+						});
+						
+						data1.append(
+						{
+							x: "" + newIndex,
+							value : res["cpu1"]["loadavg"]
+						});
+						
+						data2.append(
+						{
+							x: "" + newIndex,
+							value : res["cpu2"]["loadavg"]
+						});
+						
+						data3.append(
+						{
+							x: "" + newIndex,
+							value : res["cpu3"]["loadavg"]
+						});
+					}
+			});
+		}
+</script>
+
+<script>
+	
+		var DownloadData = anychart.data.set([]);
+		var UploadData = anychart.data.set([]);
+		
+		speedChart= anychart.line();
+		
+		speedChart.xScroller(true);
+		speedChart.yScale().ticks().interval(5);
+		
+		var DownloadDataSeries = speedChart.line(DownloadData);
+		var UploadDataSeries = speedChart.line(UploadData);
+		
+		// configure the visual settings of the second series
+		UploadDataSeries.normal().stroke("#0066cc");
+		UploadDataSeries.hovered().stroke("#0066cc", 2);
+		UploadDataSeries.selected().stroke("#0066cc", 4);
+
+		// configure the visual settings of the second series
+		DownloadDataSeries.normal().stroke("#fc0808");
+		DownloadDataSeries.hovered().stroke("#fc0808", 2);
+		DownloadDataSeries.selected().stroke("#fc0808", 4);
+
+		speedChart.container("container4").draw();
+		
+		speedChart.title().enabled(true).text("speed");
+		
+		var speedStarted = false;
+		
+		var speedTestIndex = 0;
+		
+		function speedTest(){
+			
+			// console.log("speedTest() started");
+						
+			if (speedStarted === false)
+			{
+				return;
+			}
+			
+			$.ajax({
+				url: "function.php?f=speedtest", //the page containing php script
+				type: "POST", //request type
+				success:
+					function(result){
+						
+						// console.log("on success started");
+						
+						var res = JSON.parse(result);
+						
+						newIndex = speedTestIndex++;
+						
+						DownloadData.append(
+						{
+							x: "" + newIndex,
+							value : res["Download"]
+						});
+						
+						UploadData.append(
+						{
+							x: "" + newIndex,
+							value : res["Upload"]
+						});
+						
+						if (newIndex > 180)
+						{
+							DownloadData.remove(0);
+							UploadData.remove(0);
+						}
+						
+						speedTest();
+						
+						// console.log("on success finished");
+						
+					},
+				error: 
+					function (jqXHR, exception) {
+						
+						// console.log("on error started");
+						
+						newIndex = speedTestIndex++;
+						
+						DownloadData.append(
+						{
+							x: "" + newIndex,
+							value : 0
+						});
+						
+						UploadData.append(
+						{
+							x: "" + newIndex,
+							value :0
+						});
+						
+						if (newIndex > 180)
+						{
+							DownloadData.remove(0);
+							UploadData.remove(0);
+						}
+						
+						speedTest();
+						
+						// console.log("on error finished");
+					}
+			});
+			
+			
+			// console.log("speedTest() finished");
+		}
+		
+		function startSpeed(){
+			speedStarted = true;
+			speedTest();
+		}
+		
+		function stopSpeed(){
+			speedStarted = false;
+		}
+</script>
